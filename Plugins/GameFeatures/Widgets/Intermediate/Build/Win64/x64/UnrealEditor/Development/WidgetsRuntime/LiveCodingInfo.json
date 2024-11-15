@@ -1,0 +1,8 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.WidgetsRuntime.cpp.obj": [
+			"WidgetsRuntimeModule.cpp.obj"
+		]
+	}
+}

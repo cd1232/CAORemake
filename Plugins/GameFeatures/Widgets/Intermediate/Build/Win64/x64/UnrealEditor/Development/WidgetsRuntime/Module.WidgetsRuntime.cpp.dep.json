@@ -1,0 +1,15 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "f:\\projects\\dao\\plugins\\gamefeatures\\widgets\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\widgetsruntime\\module.widgetsruntime.cpp",
+        "ProvidedModule": "",
+        "PCH": "f:\\projects\\unrealengine\\engine\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\engine\\sharedpch.engine.cpp20.h.pch",
+        "Includes": [
+            "f:\\projects\\dao\\plugins\\gamefeatures\\widgets\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\widgetsruntime\\definitions.widgetsruntime.h",
+            "f:\\projects\\dao\\plugins\\gamefeatures\\widgets\\source\\widgetsruntime\\private\\widgetsruntimemodule.cpp",
+            "f:\\projects\\dao\\plugins\\gamefeatures\\widgets\\source\\widgetsruntime\\public\\widgetsruntimemodule.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
