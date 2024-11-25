@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "ItemType.h"
+#include "Equipment/EquipmentSlotType.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "LyraInventoryItemDefinition.generated.h"
@@ -10,6 +12,8 @@ template <typename T> class TSubclassOf;
 
 class ULyraInventoryItemInstance;
 struct FFrame;
+
+
 
 //////////////////////////////////////////////////////////////////////
 
@@ -42,6 +46,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Display)
 	FText ItemDescription;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Display)
+	EItemType ItemType;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Display, Instanced)
 	TArray<TObjectPtr<ULyraInventoryItemFragment>> Fragments;
 

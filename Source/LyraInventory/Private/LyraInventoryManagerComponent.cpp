@@ -139,6 +139,20 @@ TArray<ULyraInventoryItemInstance*> FLyraInventoryList::GetAllItems() const
 	return Results;
 }
 
+TArray<ULyraInventoryItemInstance*> FLyraInventoryList::GetItemsOfType(EItemType ItemType) const
+{
+	TArray<ULyraInventoryItemInstance*> Results;
+	Results.Reserve(Entries.Num());
+	for (const FLyraInventoryEntry& Entry : Entries)
+	{
+		if (Entry.Instance != nullptr && Entry.Instance->ItemDef->GetDefaultObject<ULyraInventoryItemDefinition>()->ItemType ==ItemType) //@TODO: Would prefer to not deal with this here and hide it further?
+		{
+			Results.Add(Entry.Instance);
+		}
+	}
+	return Results;
+}
+
 //////////////////////////////////////////////////////////////////////
 // ULyraInventoryManagerComponent
 
@@ -199,6 +213,11 @@ void ULyraInventoryManagerComponent::RemoveItemInstance(ULyraInventoryItemInstan
 TArray<ULyraInventoryItemInstance*> ULyraInventoryManagerComponent::GetAllItems() const
 {
 	return InventoryList.GetAllItems();
+}
+
+TArray<ULyraInventoryItemInstance*> ULyraInventoryManagerComponent::GetAllItemsOfType(EItemType ItemType) const
+{
+	return InventoryList.GetItemsOfType(ItemType);
 }
 
 ULyraInventoryItemInstance* ULyraInventoryManagerComponent::FindFirstItemStackByDefinition(TSubclassOf<ULyraInventoryItemDefinition> ItemDef) const

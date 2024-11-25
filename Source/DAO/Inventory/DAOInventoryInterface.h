@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ItemType.h"
 #include "UObject/Interface.h"
 #include "DAOInventoryInterface.generated.h"
 
@@ -26,4 +27,7 @@ class DAO_API IDAOInventoryInterface
 public:
 	UFUNCTION(BlueprintCallable)
 	virtual TArray<ULyraInventoryItemInstance*> GetInventoryData() = 0;
+
+	UFUNCTION(BlueprintCallable)
+	virtual TArray<ULyraInventoryItemInstance*> GetInventoryDataFiltered(EItemType ItemType) = 0;
 };

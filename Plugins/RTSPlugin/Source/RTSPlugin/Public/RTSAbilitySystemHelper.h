@@ -58,12 +58,21 @@ public:
     //                                           const ARTSPlayerState* OtherPlayerState,
     //                                           FGameplayTagContainer& OutRelationshipTags);
 
+    /** Gets the maximum level of the ability. */
+    UFUNCTION(Category = "RTS Ability|Abilities", BlueprintPure, meta = (WorldContext = "WorldContextObject"))
+    static int32 GetAbilityMaxLevel(UObject* WorldContextObject, TSubclassOf<UGameplayAbility> Ability);
+
+
     /**
      * Gets the gameplay tags of the specified actors, including relationship tags.
      */
     UFUNCTION(Category = "Ability|Tags", BlueprintPure)
     static void GetSourceAndTargetTags(const AActor* SourceActor, const AActor* TargetActor,
                                        FGameplayTagContainer& OutSourceTags, FGameplayTagContainer& OutTargetTags);
+
+    /** Gets the last single name of the specified Tag. */
+    UFUNCTION(BlueprintPure, Category = "RTS")
+    static FName GetLastTagName(FGameplayTag Tag);
 
 
     /** Fills a 'FGameplayEventData' with values from the specified ability and order target data. */

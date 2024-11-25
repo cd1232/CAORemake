@@ -16,6 +16,6 @@ public class DAOTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "LyraInventory" });
+		ExtraModuleNames.AddRange(new string[] { "LyraInventory", "KatsuraQuest", "KatsuraQuestEditor" });
 	}
 }

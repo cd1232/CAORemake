@@ -6,6 +6,7 @@
 // Local Includes
 #include "RTSOrderProcessPolicy.h"
 #include "RTSGlobalTags.h"
+#include "RTSOrderGroupExecutionType.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RTSOrder)
 
@@ -28,6 +29,83 @@ bool URTSOrder::CanObeyOrder(const AActor* OrderedActor, int32 Index, FRTSOrderE
 bool URTSOrder::IsValidTarget(const AActor* OrderedActor, const FRTSOrderTargetData& TargetData, int32 Index, FRTSOrderErrorTags* OutErrorTags /*= nullptr*/) const
 {
 	return true;
+}
+
+void URTSOrder::CreateIndividualTargetLocations(const TArray<AActor*>& OrderedActors,
+	const FRTSOrderTargetData& TargetData, TArray<FVector2D>& OutTargetLocations) const
+{
+}
+
+bool URTSOrder::GetAcquisitionRadiusOverride(const AActor* OrderedActor, int32 Index, float& OutAcquisitionRadius) const
+{
+	return false;
+}
+
+TSoftClassPtr<URTSOrder> URTSOrder::GetFallbackOrder() const
+{
+	return FallbackOrder;
+}
+
+float URTSOrder::GetTargetScore(const AActor* OrderedActor, const FRTSOrderTargetData& TargetData, int32 Index) const
+{
+	// TODO: Implement this function individually for each order type instead of here in the base class.
+	if (!IsValid(OrderedActor))
+	{
+		return 0.0f;
+	}
+
+	float Distance = 0.0f;
+
+	if (IsValid(TargetData.Actor))
+	{
+		// Subtract the half collision size of the target from the distance.
+		// TODO: This is only relevant for melee units and should be ignored for ranged units.
+		Distance = FVector::Dist2D(OrderedActor->GetActorLocation(), TargetData.Actor->GetActorLocation());
+
+		// NOTE(np): In A Year Of Rain, unit collision radius is deducted from range to account for different unit sizes.
+		//Distance -= URTSUtilities::GetActorCollisionSize(TargetData.Actor) / 2.0f;
+	}
+
+	else
+	{
+		Distance = FVector::Dist2D(OrderedActor->GetActorLocation(), FVector(TargetData.Location));
+	}
+
+	float AcquisitionRadius;
+	if (!GetAcquisitionRadiusOverride(OrderedActor, Index, AcquisitionRadius))
+	{
+		// NOTE(np): In A Year Of Rain, units have a specific radius in which to automatically acquire targets.
+		/*const URTSAttackComponent* AttackComponent = OrderedActor->FindComponentByClass<URTSAttackComponent>();
+		if (AttackComponent == nullptr)
+		{
+			return 0.0f;
+		}
+
+		AcquisitionRadius = AttackComponent->GetAcquisitionRadius();*/
+		AcquisitionRadius = 100000.0f;
+	}
+
+	return 1.0f - Distance / AcquisitionRadius;
+}
+
+ERTSOrderGroupExecutionType URTSOrder::GetGroupExecutionType(const AActor* OrderedActor, int32 Index) const
+{
+	return ERTSOrderGroupExecutionType::ALL;
+}
+
+bool URTSOrder::IsHumanPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const
+{
+	return false;
+}
+
+bool URTSOrder::GetHumanPlayerAutoOrderInitialState(const AActor* OrderedActor, int32 Index) const
+{
+	return false;
+}
+
+bool URTSOrder::IsAIPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const
+{
+	return false;
 }
 
 FRTSOrderPreviewData URTSOrder::GetOrderPreviewData(const AActor* OrderedActor, int32 Index) const

@@ -5,6 +5,7 @@
 // Engine Includes
 
 // Local Includes
+#include "RTSOrderGroupExecutionType.h"
 #include "RTSOrderWithBehavior.h"
 #include "RTSOrderTargetType.h"
 #include "RTSOrderPreviewData.h"
@@ -62,13 +63,13 @@ public:
     virtual float GetRequiredRange(const AActor* OrderedActor, int32 Index) const override;
     virtual FRTSOrderPreviewData GetOrderPreviewData(const AActor* OrderedActor, int32 Index) const override;
     virtual ERTSOrderProcessPolicy GetOrderProcessPolicy(const AActor* OrderedActor) const override;
-    //virtual ERTSOrderGroupExecutionType GetGroupExecutionType(const AActor* OrderedActor, int32 Index) const override;
-    //virtual bool IsHumanPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const override;
-    //virtual bool GetHumanPlayerAutoOrderInitialState(const AActor* OrderedActor, int32 Index) const override;
-    //virtual bool IsAIPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const override;
-    //virtual bool GetAcquisitionRadiusOverride(const AActor* OrderedActor, int32 Index,
-                                             // float& OutAcquisitionRadius) const override;
-    //virtual float GetTargetScore(const AActor* OrderedActor, const FRTSOrderTargetData& TargetData, int32 Index) const;
+    virtual ERTSOrderGroupExecutionType GetGroupExecutionType(const AActor* OrderedActor, int32 Index) const override;
+    virtual bool IsHumanPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const override;
+    virtual bool GetHumanPlayerAutoOrderInitialState(const AActor* OrderedActor, int32 Index) const override;
+    virtual bool IsAIPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const override;
+    virtual bool GetAcquisitionRadiusOverride(const AActor* OrderedActor, int32 Index,
+                                              float& OutAcquisitionRadius) const override;
+    virtual float GetTargetScore(const AActor* OrderedActor, const FRTSOrderTargetData& TargetData, int32 Index) const;
     //~ End URTSOrder Interface
 
 protected:

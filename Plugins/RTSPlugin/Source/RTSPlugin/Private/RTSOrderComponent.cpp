@@ -66,7 +66,7 @@ void URTSOrderComponent::BeginPlay()
    //    SelectableComponent->OnDeselected.AddDynamic(this, &URTSOrderComponent::OnDeselected);
    //}
 
-   // Reset current order.
+    // Reset current order.
     CurrentOrder = FRTSOrderData();
 
 	// Try to set the stop order if possible.
@@ -76,35 +76,34 @@ void URTSOrderComponent::BeginPlay()
         return;
     }
 
-    // TODO Craig
-    // Testing removing stop order
-    //StopOrder = Controller->GetStopOrder();
+  
+    StopOrder = Controller->GetStopOrder();
 
-    //CurrentOrder = StopOrder;
-    //IssueOrder(StopOrder);	
+    CurrentOrder = StopOrder;
+    IssueOrder(StopOrder);	
 }
 
-void URTSOrderComponent::StopBehaviorTree()
-{
-    APawn* pawn = Cast<APawn>(GetOwner());
-    if (pawn)
-    {
-        AAIController* AIController = Cast<AAIController>(pawn->GetController());
-        if (AIController)
-        {
-            if (UBehaviorTreeComponent* BehaviorTreeComp = AIController->FindComponentByClass<UBehaviorTreeComponent>())
-            {
-                BehaviorTreeComp->StopTree(EBTStopMode::Safe);
-            }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Failed to find ai controller in CancelOrder"));
-        }
-    }
-}
+// void URTSOrderComponent::StopBehaviorTree()
+// {
+//     APawn* pawn = Cast<APawn>(GetOwner());
+//     if (pawn)
+//     {
+//         AAIController* AIController = Cast<AAIController>(pawn->GetController());
+//         if (AIController)
+//         {
+//             if (UBehaviorTreeComponent* BehaviorTreeComp = AIController->FindComponentByClass<UBehaviorTreeComponent>())
+//             {
+//                 BehaviorTreeComp->StopTree(EBTStopMode::Safe);
+//             }
+//         }
+//         else
+//         {
+//             UE_LOG(LogTemp, Warning, TEXT("Failed to find ai controller in CancelOrder"));
+//         }
+//     }
+// }
 
-bool URTSOrderComponent::IssueOrder(const FRTSOrderData& Order)
+void URTSOrderComponent::IssueOrder(const FRTSOrderData& Order)
 {
     AActor* Owner = GetOwner();
 
@@ -115,7 +114,7 @@ bool URTSOrderComponent::IssueOrder(const FRTSOrderData& Order)
             TEXT("The order %s was send from a client. It is impossible for clients to issue orders. Clients need "
                 "to issue orders using their player controller. "),
             *Order.ToString());
-        return false;
+        return;
     }
 
     // Clear the order cue when another order is issued.
@@ -130,7 +129,7 @@ bool URTSOrderComponent::IssueOrder(const FRTSOrderData& Order)
     // Do nothing if we are obeying exact the same order already (and I mean exact: Not only the same order type)
     if (CurrentOrder == Order)
     {
-        return false;
+        return;
     }
 
     bIsHomeLocationSet = false;
@@ -147,20 +146,15 @@ bool URTSOrderComponent::IssueOrder(const FRTSOrderData& Order)
             if (CheckOrder(Order))
             {
                 ObeyOrder(Order);
-                return true;
             }
-            // TODO Craig
-            // Testing removing stop order
-            /*else
+            else
             {
-
                 ObeyStopOrder();
-            }*/
+            }
             break;
         case ERTSOrderProcessPolicy::CAN_NOT_BE_CANCELED:
             // We cannot cancel our current order so we need to queue it up as next.
             OrderQueue.Add(Order);
-            return true;
             break;
         case ERTSOrderProcessPolicy::INSTANT:
             // This should not be possible. Instant orders should not be set as current orders in the first place.
@@ -176,27 +170,198 @@ bool URTSOrderComponent::IssueOrder(const FRTSOrderData& Order)
         if (CheckOrder(Order))
         {
             ObeyOrder(Order);
-            return true;
         }
-        // TODO Craig
-        // Testing removing stop order
-        //else
-        //{
-        //    ObeyStopOrder();
-        //}
+        else
+        {
+            ObeyStopOrder();
+        }
     }
-
-    return false;
 }
 
-void URTSOrderComponent::CancelOrder()
+void URTSOrderComponent::EnqueueOrder(const FRTSOrderData& Order)
 {
-    if (CurrentOrder != EmptyOrder)
+    // It is impossible for clients to issue orders. Clients need to issue orders using their player controller.
+    if (!GetOwner()->HasAuthority())
     {
-        OrderEnded(ERTSOrderResult::CANCELED);
-        StopBehaviorTree();
+        UE_LOG(LogTemp, Error,
+               TEXT("The order %s was send from a client. It is impossible for clients to issue orders. Clients need "
+                    "to issue orders using their player controller. "),
+               *Order.ToString());
+        return;
+    }
+
+    if (!CheckOrder(Order))
+    {
+        return;
+    }
+
+    if (OrderQueue.Num() == 0 && CurrentOrder.OrderType == StopOrder)
+    {
+        ObeyOrder(Order);
+    }
+
+    else
+    {
+        // Do nothing if we are obeying exact the same order already (and I mean exact: Not only the same order type)
+        if (OrderQueue.Num() > 0 && OrderQueue.Last() == Order)
+        {
+            return;
+        }
+
+        OrderQueue.Add(Order);
+        OnOrderEnqueued.Broadcast(Order);
+
+        UpdateOrderPreviews();
     }
 }
+
+void URTSOrderComponent::InsertOrderAfterCurrentOrder(const FRTSOrderData& Order)
+{
+    // It is impossible for clients to issue orders. Clients need to issue orders using their player controller.
+    if (!GetOwner()->HasAuthority())
+    {
+        UE_LOG(LogTemp, Error,
+               TEXT("The order %s was send from a client. It is impossible for clients to issue orders. Clients need "
+                    "to issue orders using their player controller. "),
+               *Order.ToString());
+        return;
+    }
+
+    if (!CheckOrder(Order))
+    {
+        return;
+    }
+
+    if (OrderQueue.Num() == 0 && CurrentOrder.OrderType == StopOrder)
+    {
+        ObeyOrder(Order);
+    }
+
+    bIsHomeLocationSet = false;
+
+    OrderQueue.Insert(Order, 0);
+}
+
+void URTSOrderComponent::ClearOrderQueue()
+{
+    AActor* Owner = GetOwner();
+
+    // It is impossible for clients to issue orders. Clients need to issue orders using their player controller.
+    if (!Owner->HasAuthority())
+    {
+        UE_LOG(LogTemp, Error,
+               TEXT("It is impossible for clients to issue orders. Clients need "
+                    "to issue orders using their player controller. "));
+        return;
+    }
+
+    // Clear the order cue when another order is issued.
+    OrderQueue.Empty();
+    OnOrderQueueCleared.Broadcast();
+}
+
+void URTSOrderComponent::InsertOrderBeforeCurrentOrder(const FRTSOrderData& Order)
+{
+    // It is impossible for clients to issue orders. Clients need to issue orders using their player controller.
+    if (!GetOwner()->HasAuthority())
+    {
+        UE_LOG(LogTemp, Error,
+               TEXT("The order %s was send from a client. It is impossible for clients to issue orders. Clients need "
+                    "to issue orders using their player controller. "),
+               *Order.ToString());
+        return;
+    }
+
+    if (!CheckOrder(Order))
+    {
+        return;
+    }
+
+    // Queue the current order.
+    OrderQueue.Insert(CurrentOrder, 0);
+
+    // Save home location of the current order.
+    ARTSOrderAIController* Controller = Cast<ARTSOrderAIController>(Cast<APawn>(GetOwner())->GetController());
+    if (Controller != nullptr)
+    {
+        LastOrderHomeLocation = Controller->GetHomeLocation();
+    }
+
+    // Directly obey the passed order.
+    ObeyOrder(Order);
+
+    // Set to true after obey order to not use the last order home location for the current order.
+    bIsHomeLocationSet = true;
+}
+
+TSoftClassPtr<URTSOrder> URTSOrderComponent::GetCurrentOrderType() const
+{
+    return CurrentOrder.OrderType;
+}
+
+bool URTSOrderComponent::IsIdle() const
+{
+    return GetCurrentOrderType() == StopOrder;
+}
+
+FRTSOrderData URTSOrderComponent::GetCurrentOrderData() const
+{
+    return CurrentOrder;
+}
+
+TArray<FRTSOrderData> URTSOrderComponent::GetCurrentOrderDataQueue() const
+{
+    return OrderQueue;
+}
+
+AActor* URTSOrderComponent::GetCurrentOrderTargetActor() const
+{
+    return CurrentOrder.Target;
+}
+
+FVector URTSOrderComponent::GetCurrentOrderTargetLocation() const
+{
+    return CurrentOrder.Location;
+}
+
+int32 URTSOrderComponent::GetCurrentOrderTargetIndex() const
+{
+    return CurrentOrder.Index;
+}
+
+void URTSOrderComponent::OnSelected()
+{
+    UpdateOrderPreviews();
+}
+
+void URTSOrderComponent::OnDeselected()
+{
+    // Destroy previews except for construction previews.
+    for (int32 Index = OrderPreviewActors.Num() - 1; Index > 0; --Index)
+    {
+        if (OrderPreviewActors.IsValidIndex(Index) && OrderQueue.IsValidIndex(Index - 1) &&
+            OrderQueue[Index - 1].OrderType != BeginConstructionOrder)
+        {
+            OrderPreviewActors[Index]->Destroy();
+            OrderPreviewActors.RemoveAt(Index);
+        }
+    }
+
+    if (OrderPreviewActors.IsValidIndex(0) && CurrentOrder.OrderType != BeginConstructionOrder)
+    {
+        OrderPreviewActors[0]->Destroy();
+        OrderPreviewActors.RemoveAt(0);
+    }
+}
+
+// void URTSOrderComponent::CancelOrder()
+// {
+//     if (CurrentOrder != EmptyOrder)
+//     {
+//         OrderEnded(ERTSOrderResult::CANCELED);
+//         StopBehaviorTree();
+//     }
+// }
 
 void URTSOrderComponent::ReceivedCurrentOrder()
 {
@@ -288,22 +453,17 @@ void URTSOrderComponent::OrderEnded(ERTSOrderResult OrderResult)
 {
     AActor* Owner = GetOwner();
 
-    //UE_LOG(LogTemp, Log, TEXT("URTSOrderComponent::OrderEnded"));
+   UE_LOG(LogTemp, Log, TEXT("URTSOrderComponent::OrderEnded"));
 
     switch (OrderResult)
     {
     case ERTSOrderResult::FAILED:
-    {
-        CurrentOrder = EmptyOrder;
-    }
+        if (StopOrder != nullptr)
+        {
+            // OrderCanceled will be raised in IssueOrder.
+            IssueOrder(FRTSOrderData(StopOrder));
+        }
     break;
-    // TODO Craig
-    // Testing removing stop order
-    //if (StopOrder != nullptr)
-    //{
-    //    // OrderCanceled will be raised in IssueOrder.
-    //    IssueOrder(FRTSOrderData(StopOrder));
-    //}
     case ERTSOrderResult::CANCELED:
     {
         if (!URTSOrderHelper::CanOrderBeConsideredAsSucceeded(
@@ -312,10 +472,7 @@ void URTSOrderComponent::OrderEnded(ERTSOrderResult OrderResult)
             CurrentOrder.Index))
         {
             // OrderCanceled will be raised in IssueOrder.
-              // TODO Craig
-               // Testing removing stop order
-            //IssueOrder(FRTSOrderData(StopOrder));
-            CurrentOrder = EmptyOrder;
+            IssueOrder(FRTSOrderData(StopOrder));
         }
     }
     break;
@@ -334,23 +491,13 @@ void URTSOrderComponent::OrderEnded(ERTSOrderResult OrderResult)
             else
             {
                 OrderQueue.Empty();
-                // TODO Craig
-                // Testing removing stop order
-                //ObeyStopOrder();
-                CurrentOrder = EmptyOrder;
+                ObeyStopOrder();
             }
         }
-        else
+        else if (StopOrder != nullptr)
         {
-            CurrentOrder = EmptyOrder;
+            ObeyStopOrder();
         }
-        // TODO Craig
-        // Testing removing stop order
-        //else if (StopOrder != nullptr)
-        //{
-        //    ObeyStopOrder();
-        //}
-
     }
     break;
     default:
@@ -688,8 +835,6 @@ void URTSOrderComponent::OnOwnerTagsChanged(const FGameplayTag Tag, int32 NewCou
 
 void URTSOrderComponent::OnOrderEndedCallback(ERTSOrderResult OrderResult)
 {
-    StopBehaviorTree();
-
     OrderEnded(OrderResult);
 }
 

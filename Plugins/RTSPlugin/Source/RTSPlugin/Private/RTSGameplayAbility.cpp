@@ -33,6 +33,11 @@ ERTSOrderTargetType URTSGameplayAbility::GetTargetType() const
     return TargetType;
 }
 
+ERTSOrderGroupExecutionType URTSGameplayAbility::GetGroupExecutionType() const
+{
+    return GroupExecutionType;
+}
+
 FGameplayTag URTSGameplayAbility::GetEventTriggerTag() const
 {
     for (const FAbilityTriggerData& AbilityTrigger : AbilityTriggers)

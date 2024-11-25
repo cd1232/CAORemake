@@ -18,6 +18,7 @@
 #include "Abilities/GameplayAbility.h"
 
 // Local Includes
+#include "DAOCharacter.h"
 #include "InteractionComponent.h"
 #include "Core/DAOBaseCharacter.h"
 #include "Core/RelationshipComponent.h"
@@ -44,7 +45,6 @@ ADAOPlayerController::ADAOPlayerController()
 
 	CharacterInfoViewModel = CreateDefaultSubobject<UVMPlayerInfo>(TEXT("PlayerInfo"));
 	AbilitiesViewModel = CreateDefaultSubobject<UVMAbilities>(TEXT("AbilitiesVM"));
-
 }
 
 void ADAOPlayerController::SetControlledCharacter(ADAOBaseCharacter* NewCharacter)
@@ -75,6 +75,7 @@ void ADAOPlayerController::SetControlledCharacter(ADAOBaseCharacter* NewCharacte
 
 		// TODO Craig - Setup delegates to update the view model when health/mana/character changes
 		//CurrentlyControlledCharacter->HealthChangedDelegateHandle.
+		PartyCharacters.AddUnique(CurrentlyControlledCharacter.Get());
 	}
 
 	if (NewCharacter && NewCharacter->GetController())
@@ -85,6 +86,7 @@ void ADAOPlayerController::SetControlledCharacter(ADAOBaseCharacter* NewCharacte
 	{
 		NewCharacter->OnCharacterPossessed.AddUObject(this, &ADAOPlayerController::OnControlledCharacterPossessed);
 	}
+
 }
 
 ADAOBaseCharacter* ADAOPlayerController::GetControlledCharacter() const
@@ -147,6 +149,19 @@ TArray<ULyraInventoryItemInstance*> ADAOPlayerController::GetInventoryData()
 	return {};
 }
 
+TArray<ULyraInventoryItemInstance*> ADAOPlayerController::GetInventoryDataFiltered(EItemType ItemType)
+{
+	if (CurrentlyControlledCharacter.IsValid())
+	{		
+		if (const ULyraInventoryManagerComponent* CharacterInventory = CurrentlyControlledCharacter->FindComponentByClass<ULyraInventoryManagerComponent>())
+		{
+			return CharacterInventory->GetAllItemsOfType(ItemType);
+		}
+	}
+
+	return {};
+}
+
 void ADAOPlayerController::BeginPlay()
 {  
 	// Load inventory off save game before starting play
@@ -162,24 +177,11 @@ void ADAOPlayerController::BeginPlay()
 	}
 }
 
-void ADAOPlayerController::OnPossess(APawn* aPawn)
-{
-	Super::OnPossess(aPawn);
-
-	//AbilitySystemComponent->InitAbilityActorInfo(PS, aPawn);
-}
-
 void ADAOPlayerController::OnControlledCharacterPossessed()
 {
 	if (CurrentlyControlledCharacter.IsValid() && CurrentlyControlledCharacter->GetController())
 	{
 		CharacterAIController = Cast<ARTSOrderAIController>(CurrentlyControlledCharacter->GetController());
-
-		// TODO Craig
-		// Better way to have an inventory source
-		// Each character should have it's local inventory
-		// With global inventory living on the controller maybe?
-		//CurrentlyControlledCharacter.Get()->SetInventorySource(this);
 	}
 }
 
@@ -343,16 +345,16 @@ void ADAOPlayerController::OnConfirmTargetTriggered(const FInputActionValue& Val
 		FHitResult HitResult;
 		if (GetHitResultUnderCursorByChannel(TraceTypeQuery3, false, HitResult))
 		{
-			UE_LOG(LogTemp, Log, TEXT("COnfirmTarget"));
+			UE_LOG(LogTemp, Log, TEXT("ConfirmTarget"));
 			
 			OrderDataForTargeting.Target = HitResult.GetActor();
-			bool bWasIssued = CurrentlyControlledCharacter->GetRTSOrderComponent()->IssueOrder(OrderDataForTargeting);
+			CurrentlyControlledCharacter->GetRTSOrderComponent()->IssueOrder(OrderDataForTargeting);
 
-			if (bWasIssued)
-			{
-				SetMouseCursorLock(false);
-				SetMouseCursor(EMouseCursor::Type::Default);
-			}
+			// if (bWasIssued)
+			// {
+			// 	SetMouseCursorLock(false);
+			// 	SetMouseCursor(EMouseCursor::Type::Default);
+			// }
 			// TODO Craig
 			// Getting first actor at the moment
 			// How do we know if order was successful??
@@ -411,6 +413,17 @@ FTraceHandle ADAOPlayerController::GetHitResultAtScreenPositionAsync(const FVect
 	}
 
 	return TraceHandle;
+}
+
+TArray<UTexture2D*> ADAOPlayerController::GetCurrentPartyIcons()
+{
+	TArray<UTexture2D*> Icons;
+	for (int i = 0; i < PartyCharacters.Num(); i++)
+	{
+		Icons.Add(PartyCharacters[i].Get()->GetCharacterIcon());
+	}
+
+	return Icons;
 }
 
 void ADAOPlayerController::IssueOrder(const FRTSOrderData& Order)

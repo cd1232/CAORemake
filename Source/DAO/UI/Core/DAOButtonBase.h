@@ -6,6 +6,7 @@
 #include "CommonButtonBase.h"
 #include "DAOButtonBase.generated.h"
 
+class UCommonTextBlock;
 /**
  * 
  */
@@ -26,17 +27,21 @@ protected:
 	// UCommonButtonBase interface
 	virtual void UpdateInputActionWidget() override;
 	virtual void OnInputMethodChanged(ECommonInputType CurrentInputType) override;
+	virtual void NativeOnCurrentTextStyleChanged() override;
 	// End of UCommonButtonBase interface
 
 	void RefreshButtonText();
 	
-	UFUNCTION(BlueprintImplementableEvent)
+	
 	void UpdateButtonText(const FText& InText);
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void UpdateButtonStyle();
 	
 private:
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UCommonTextBlock> TextBlock_ButtonText;
+	
 	UPROPERTY(EditAnywhere, Category="Button", meta=(InlineEditConditionToggle))
 	uint8 bOverride_ButtonText : 1;
 	

@@ -232,6 +232,118 @@ ERTSOrderProcessPolicy URTSUseAbilityOrder::GetOrderProcessPolicy(const AActor* 
     return ERTSOrderProcessPolicy::CAN_BE_CANCELED;
 }
 
+ERTSOrderGroupExecutionType URTSUseAbilityOrder::GetGroupExecutionType(const AActor* OrderedActor, int32 Index) const
+{
+    if (OrderedActor == nullptr)
+    {
+        return ERTSOrderGroupExecutionType::ALL;
+    }
+
+    const URTSAbilitySystemComponent* AbilitySystem = OrderedActor->FindComponentByClass<URTSAbilitySystemComponent>();
+    URTSGameplayAbility* Ability = Cast<URTSGameplayAbility>(GetAbility(AbilitySystem, Index));
+
+    if (Ability != nullptr)
+    {
+        return Ability->GetGroupExecutionType();
+    }
+
+    return ERTSOrderGroupExecutionType::ALL;
+}
+
+bool URTSUseAbilityOrder::IsHumanPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const
+{
+    if (OrderedActor == nullptr)
+    {
+        return false;
+    }
+
+    const URTSAbilitySystemComponent* AbilitySystem = OrderedActor->FindComponentByClass<URTSAbilitySystemComponent>();
+    URTSGameplayAbility* Ability = Cast<URTSGameplayAbility>(GetAbility(AbilitySystem, Index));
+
+    if (Ability != nullptr)
+    {
+        return Ability->IsHumanPlayerAutoAbility();
+    }
+
+    return false;
+}
+
+bool URTSUseAbilityOrder::GetHumanPlayerAutoOrderInitialState(const AActor* OrderedActor, int32 Index) const
+{
+    if (OrderedActor == nullptr)
+    {
+        return false;
+    }
+
+    const URTSAbilitySystemComponent* AbilitySystem = OrderedActor->FindComponentByClass<URTSAbilitySystemComponent>();
+    URTSGameplayAbility* Ability = Cast<URTSGameplayAbility>(GetAbility(AbilitySystem, Index));
+
+    if (Ability != nullptr)
+    {
+        return Ability->GetHumanPlayerAutoAutoAbilityInitialState();
+    }
+
+    return false;
+}
+
+bool URTSUseAbilityOrder::IsAIPlayerAutoOrder(const AActor* OrderedActor, int32 Index) const
+{
+    if (OrderedActor == nullptr)
+    {
+        return false;
+    }
+
+    const URTSAbilitySystemComponent* AbilitySystem = OrderedActor->FindComponentByClass<URTSAbilitySystemComponent>();
+    URTSGameplayAbility* Ability = Cast<URTSGameplayAbility>(GetAbility(AbilitySystem, Index));
+
+    if (Ability != nullptr)
+    {
+        return Ability->IsAIPlayerAutoAbility();
+    }
+
+    return false;
+}
+
+bool URTSUseAbilityOrder::GetAcquisitionRadiusOverride(const AActor* OrderedActor, int32 Index,
+    float& OutAcquisitionRadius) const
+{
+    if (OrderedActor == nullptr)
+    {
+        return false;
+    }
+
+    const URTSAbilitySystemComponent* AbilitySystem = OrderedActor->FindComponentByClass<URTSAbilitySystemComponent>();
+    URTSGameplayAbility* Ability = Cast<URTSGameplayAbility>(GetAbility(AbilitySystem, Index));
+
+    if (Ability != nullptr)
+    {
+        return Ability->GetAcquisitionRadiusOverride(OutAcquisitionRadius);
+    }
+
+    return false;
+}
+
+float URTSUseAbilityOrder::GetTargetScore(const AActor* OrderedActor, const FRTSOrderTargetData& TargetData,
+    int32 Index) const
+{
+    if (OrderedActor == nullptr)
+    {
+        return Super::GetTargetScore(OrderedActor, TargetData, Index);
+    }
+
+    const URTSAbilitySystemComponent* AbilitySystem = OrderedActor->FindComponentByClass<URTSAbilitySystemComponent>();
+    URTSGameplayAbility* Ability = Cast<URTSGameplayAbility>(GetAbility(AbilitySystem, Index));
+
+    if (Ability == nullptr || !Ability->IsTargetScoreOverriden())
+    {
+        Super::GetTargetScore(OrderedActor, TargetData, Index);
+    }
+
+    float TargetScore;
+    Ability->GetTargetScore(OrderedActor, TargetData, Index, TargetScore);
+    return TargetScore;
+}
+
 UGameplayAbility* URTSUseAbilityOrder::GetAbility(const URTSAbilitySystemComponent* AbilitySystem, int32 Index) const
 {
     const TArray<TSubclassOf<UGameplayAbility>>& Abilities = AbilitySystem->GetInitialAndUnlockableAbilities();

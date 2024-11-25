@@ -13,6 +13,7 @@
 // Forward Declares
 class UCameraComponent;
 class USpringArmComponent;
+class UCharacterInfoDataAsset;
 
 UCLASS(Blueprintable)
 class DAO_API ADAOCharacter : public ADAOBaseCharacter
@@ -27,6 +28,11 @@ public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
+	UFUNCTION(BlueprintCallable)
+	void SetupCharacter(UCharacterInfoDataAsset* CharacterInfo);
+
+	UTexture2D* GetCharacterIcon() const;
+
 private:
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -35,5 +41,8 @@ private:
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTexture2D> CharacterIcon;
 };
 

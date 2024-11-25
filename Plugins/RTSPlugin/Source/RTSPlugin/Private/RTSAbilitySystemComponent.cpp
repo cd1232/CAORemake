@@ -6,13 +6,47 @@
 // Engine Includes
 #include <AbilitySystemLog.h>
 
+#include "AbilitySystemGlobals.h"
+#include "RTSUseAbilityOrder.h"
+#include "Net/UnrealNetwork.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RTSAbilitySystemComponent)
+
+URTSAbilitySystemComponent::URTSAbilitySystemComponent()
+{
+    Level = 1;
+    CollectedXP = 0;
+    AbilityPoints = 0;
+}
+
+void URTSAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(URTSAbilitySystemComponent, CollectedXP);
+    DOREPLIFETIME(URTSAbilitySystemComponent, AbilityPoints);
+    //DOREPLIFETIME(URTSAbilitySystemComponent, ItemAbilities);
+}
 
 void URTSAbilitySystemComponent::BeginPlay()
 {
     Super::BeginPlay();
 
     OnAbilityEnded.AddUObject(this, &URTSAbilitySystemComponent::AbilityEndedCallback);
+
+    // Initialize the attributes.
+    InitializeAttributes(Level, true);
+
+    // Set the current XP based on the initial level.
+    if (Level != MaxLevel)
+    {
+        CollectedXP = GetTotalXPRequiredForLevel(Level - 1);
+    }
+
+    else
+    {
+        CollectedXP = GetTotalXPRequiredForLevel(Level);
+    }
 
     // Initialize the abilities.
     for (TSubclassOf<UGameplayAbility> Ability : InitialAbilities)
@@ -25,7 +59,6 @@ void URTSAbilitySystemComponent::BeginPlay()
 
     bHaveAbilitiesBeenGiven = true;
 }
-
 
 void URTSAbilitySystemComponent::ReceiveDamage(URTSAbilitySystemComponent* SourceASC, float UnmitigatedDamage, float MitigatedDamage)
 {
@@ -51,10 +84,258 @@ float URTSAbilitySystemComponent::GetAbilityRange(TSubclassOf<URTSGameplayAbilit
     return 0.0f;
 }
 
-//TArray<TSubclassOf<UGameplayAbility>> URTSAbilitySystemComponent::GetInitialAndUnlockableAbilities() const
-//{
-//	return ActivatableAbilities;
-//}
+void URTSAbilitySystemComponent::GetAutoOrders_Implementation(TArray<FRTSOrderTypeWithIndex>& OutAutoOrders)
+{
+    // TODO
+    TArray<TSubclassOf<UGameplayAbility>> BasicAttackAbilities;// = URTSAbilitySystemHelper::GetBasicAttackAbilities(this);
+    TArray<TSubclassOf<UGameplayAbility>> InitialAndUnlockableAbilities = GetInitialAndUnlockableAbilities();
+
+    for (int32 Index = 0; Index < InitialAndUnlockableAbilities.Num(); ++Index)
+    {
+        TSubclassOf<UGameplayAbility> AbilityType = InitialAndUnlockableAbilities[Index];
+
+        if (AbilityType == nullptr)
+        {
+            continue;
+        }
+
+        URTSGameplayAbility* Ability = AbilityType->GetDefaultObject<URTSGameplayAbility>();
+        if (Ability == nullptr)
+        {
+            continue;
+        }
+
+        if (Ability->GetTargetType() != ERTSOrderTargetType::PASSIVE && !BasicAttackAbilities.Contains(AbilityType))
+        {
+            OutAutoOrders.Add(FRTSOrderTypeWithIndex(UseAbilityOrder, Index));
+        }
+    }
+}
+
+FName URTSAbilitySystemComponent::GetName() const
+{
+    static FName Name = URTSAbilitySystemHelper::GetLastTagName(NameTag);
+    return Name;
+}
+
+FGameplayTag URTSAbilitySystemComponent::GetNameTag() const
+{
+    return NameTag;
+}
+
+void URTSAbilitySystemComponent::SetLevel(int32 NewLevel)
+{
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr)
+    {
+        return;
+    }
+
+    if (NewLevel >= MaxLevel)
+    {
+        CollectedXP = GetTotalXPRequiredForLevel(MaxLevel - 1);
+        NewLevel = MaxLevel;
+    }
+
+    if (Level == NewLevel)
+    {
+        return;
+    }
+
+    if (Owner->HasAuthority())
+    {
+        if (NewLevel > 1)
+        {
+            FGameplayEffectSpecHandle Effect = MakeOutgoingSpec(LevelUpEffect, NewLevel, MakeEffectContext());
+            if (Effect.IsValid())
+            {
+                ApplyGameplayEffectSpecToSelf(*Effect.Data.Get());
+            }
+        }
+
+        // TODO
+        InitializeAttributes(NewLevel, false);
+
+        // Grant ability points.
+        SetAbilityPoints(AbilityPoints + NewLevel - Level);
+    }
+
+    Level = NewLevel;
+}
+
+float URTSAbilitySystemComponent::GetGrantedXP() const
+{
+    return GrantedXP.GetValueAtLevel(Level);
+}
+
+float URTSAbilitySystemComponent::GetTotalXPRequiredForLevel(int32 InLevel) const
+{
+    float ValueAtLevel = 0;
+
+    for (int32 CurrentLevel = 1; CurrentLevel <= InLevel; ++CurrentLevel)
+    {
+        ValueAtLevel += XPPerLevel.GetValueAtLevel(CurrentLevel);
+    }
+
+    return ValueAtLevel;
+}
+
+float URTSAbilitySystemComponent::GetCurrentLevelXP() const
+{
+    float CurrentLevelXP = Level > 1 ? GetTotalXPRequiredForLevel(Level - 1) : 0;
+    return CollectedXP - CurrentLevelXP;
+}
+
+float URTSAbilitySystemComponent::GetNextLevelXP() const
+{
+    return XPPerLevel.GetValueAtLevel(Level);
+}
+
+float URTSAbilitySystemComponent::GetCurrentLevelXPProgress() const
+{
+    float CurrentLevelXP = GetCurrentLevelXP();
+    float NextLevelXP = GetNextLevelXP();
+
+    if (NextLevelXP <= 0.0f)
+    {
+        return 1.0f;
+    }
+
+    return CurrentLevelXP / NextLevelXP;
+}
+
+float URTSAbilitySystemComponent::GetCollectedXP() const
+{
+    return CollectedXP;
+}
+
+void URTSAbilitySystemComponent::AddCollectedXP(float AdditionalCollectedXP)
+{
+    if (!bCanLevelUp)
+    {
+        return;
+    }
+
+    if (Level == MaxLevel)
+    {
+        return;
+    }
+
+    float OldCollectedXP = CollectedXP;
+    CollectedXP += AdditionalCollectedXP;
+
+    // Notify listers.
+   // NotifyOnCollectedXPChanged(OldCollectedXP, CollectedXP);
+
+    //UpdateLevel();
+}
+
+bool URTSAbilitySystemComponent::CanLevelUp() const
+{
+    return bCanLevelUp;
+}
+
+int32 URTSAbilitySystemComponent::GetAbilityPoints() const
+{
+    return AbilityPoints;
+}
+
+void URTSAbilitySystemComponent::SetAbilityPoints(int32 NewAbilityPoints)
+{
+    if (AbilityPoints == NewAbilityPoints)
+    {
+        return;
+    }
+
+    int32 OldAbilityPoints = AbilityPoints;
+    AbilityPoints = NewAbilityPoints;
+
+    // TODO
+    //NotifyOnAbilityPointsChanged(OldAbilityPoints, NewAbilityPoints);
+}
+
+void URTSAbilitySystemComponent::IncreaseAbilityLevel(TSubclassOf<UGameplayAbility> AbilityClass,
+    bool bUseAbilityPoint)
+{
+    if (AbilityClass == nullptr)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s tried to increase the level of an ability, but no ability was specified."),
+               *GetOwner()->GetName());
+        return;
+    }
+
+    // Check available ability points.
+    if (bUseAbilityPoint && AbilityPoints <= 0)
+    {
+        UE_LOG(LogTemp, Error,
+               TEXT("%s tried to increase the level of ability %s, but no ability points were available."),
+               *GetOwner()->GetName(), *AbilityClass->GetName());
+        return;
+    }
+
+    // Find ability.
+    for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+    {
+        if (!IsValid(AbilitySpec.Ability) || AbilitySpec.Ability->GetClass() != AbilityClass)
+        {
+            continue;
+        }
+
+        // Check max level.
+        if (AbilitySpec.Level == URTSAbilitySystemHelper::GetAbilityMaxLevel(this, AbilityClass))
+        {
+            UE_LOG(LogTemp, Error,
+                   TEXT("%s tried to increase the level of ability %s above %i, but that ability is already at maximum "
+                        "level."),
+                   *GetOwner()->GetName(), *AbilityClass->GetName(), AbilitySpec.Level);
+            return;
+        }
+
+        // Increase level.
+        ++AbilitySpec.Level;
+
+        // Notify instances.
+        for (UGameplayAbility* Ability : AbilitySpec.GetAbilityInstances())
+        {
+            URTSGameplayAbility* RTSAbility = Cast<URTSGameplayAbility>(Ability);
+            if (Ability->GetInstancingPolicy() != EGameplayAbilityInstancingPolicy::NonInstanced)
+            {
+                RTSAbility->OnAbilityLevelChanged(AbilitySpec.Level);
+            }
+        }
+
+        if (bUseAbilityPoint)
+        {
+            // Remove ability point.
+            SetAbilityPoints(AbilityPoints - 1);
+        }
+
+        UE_LOG(LogTemp, Log, TEXT("%s increased the level of ability %s to %i. Remaining ability points: %i."),
+               *GetOwner()->GetName(), *AbilityClass->GetName(), AbilitySpec.Level, AbilityPoints);
+
+        return;
+    }
+
+    if (UnlockableAbilities.Contains(AbilityClass))
+    {
+        // Grant ability.
+        GiveAbility(FGameplayAbilitySpec((AbilityClass->GetDefaultObject<UGameplayAbility>()), 1));
+
+        if (bUseAbilityPoint)
+        {
+            // Remove ability point.
+            SetAbilityPoints(AbilityPoints - 1);
+        }
+
+        UE_LOG(LogTemp, Log, TEXT("%s learned new ability %s. Remaining ability points: %i."), *GetOwner()->GetName(),
+               *AbilityClass->GetName(), AbilityPoints);
+
+        return;
+    }
+
+    UE_LOG(LogTemp, Error, TEXT("%s tried to increase the level of ability %s, but that ability wasn't found."),
+           *GetOwner()->GetName(), *AbilityClass->GetName());
+}
 
 void URTSAbilitySystemComponent::AddTag(const FGameplayTag Tag)
 {
@@ -257,6 +538,50 @@ bool URTSAbilitySystemComponent::TryActivateAbilityWithEventData(FGameplayAbilit
     }
 
     return InternalTryActivateAbility(AbilityToActivate, FPredictionKey(), nullptr, nullptr, &EventData);
+}
+
+void URTSAbilitySystemComponent::InitializeAttributes(int AttributeLevel, bool bInitialInit)
+{
+    if (!NameTag.IsValid())
+    {
+        return;
+    }
+
+    if (DefaultStartingData.Num() == 0)
+    {
+        return;
+    }
+
+    FName GroupName = URTSAbilitySystemHelper::GetLastTagName(NameTag);
+
+    // TODO Craig
+    // Note that this might cause a crash when no valid paths to data tables where specified in the 'Game.ini' file.
+    // FAttributeSetInitter* AttributeInitter = UAbilitySystemGlobals::Get().GetAttributeSetInitter();
+    //
+    // // This is a work around for a bug that happens at least in the editor. It might be that the 'SpawnedAttributes'
+    // // contains nullptr entries for some for some unknown reason. This has properly something to do with serialization.
+    // // 'AttributeInitter->InitAttributeSetDefaults' will crash when the array contains a nullptr.
+    // //for (int32 i = SpawnedAttributes.Num() - 1; i >= 0; --i)
+    // //{
+    // //    if (SpawnedAttributes[i] == nullptr)
+    // //    {
+    // //        SpawnedAttributes.RemoveAt(i);
+    // //    }
+    // //}
+    //
+    // UE_LOG(LogTemp, Verbose, TEXT("Initializing attributes of %s with group name %s..."), *GetOwner()->GetName(),
+    //        *GroupName.ToString());
+    //
+    // AttributeInitter->InitAttributeSetDefaults(this, GroupName, AttributeLevel, bInitialInit);
+
+    //for (UAttributeSet* AttributeSet : SpawnedAttributes)
+    //{
+    //    URTSAttributeSet* RTSAttributeSet = Cast<URTSAttributeSet>(AttributeSet);
+    //    if (RTSAttributeSet != nullptr)
+    //    {
+    //        RTSAttributeSet->PostInitializeProperties(bInitialInit);
+    //    }
+    //}
 }
 
 void URTSAbilitySystemComponent::AbilityEndedCallback(const FAbilityEndedData& AbilityEndedData)

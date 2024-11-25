@@ -14,5 +14,7 @@
 UCLASS()
 class DAO_API UInventoryWidget : public UDAOActivatableWidget
 {
-	GENERATED_BODY()	
+	GENERATED_BODY()
+
+	virtual void NativeOnActivated() override;
 };

@@ -3,6 +3,7 @@
 #pragma once
 
 // Local Includes
+#include "RTSOrderGroupExecutionType.h"
 #include "Abilities/GameplayAbility.h"
 #include "RTSOrderPreviewData.h"
 #include "RTSOrderTargetType.h"
@@ -65,8 +66,7 @@ public:
     ERTSOrderTargetType GetTargetType() const;
 
     /** Gets the group execution type this ability. */
-    // TODO
-    //ERTSOrderGroupExecutionType GetGroupExecutionType() const;
+    ERTSOrderGroupExecutionType GetGroupExecutionType() const;
 
     /**
      * Gets the event trigger tag of this ability is triggered with. Note that this just returns the first event tag
@@ -187,9 +187,8 @@ protected:
     /**
      * To how many and which of the selected units should this order be issued to.
      */
-     // TODO
-   // UPROPERTY(Category = RTS, EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-   // ERTSOrderGroupExecutionType GroupExecutionType;
+    UPROPERTY(Category = RTS, EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    ERTSOrderGroupExecutionType GroupExecutionType;
 
     /**
      * The target type of this ability.

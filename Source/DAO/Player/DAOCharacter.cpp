@@ -13,6 +13,8 @@
 #include <Materials/Material.h>
 #include <Engine/World.h>
 
+#include "Core/CharacterInfoDataAsset.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DAOCharacter)
 
 ADAOCharacter::ADAOCharacter()
@@ -47,4 +49,16 @@ ADAOCharacter::ADAOCharacter()
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+}
+
+void ADAOCharacter::SetupCharacter(UCharacterInfoDataAsset* CharacterInfo)
+{
+	GetMesh()->SetSkeletalMesh(CharacterInfo->SkeletalMesh.LoadSynchronous());
+	CharacterIcon = CharacterInfo->CharacterIcon;
+	GetMesh()->SetAnimInstanceClass(CharacterInfo->AnimInstance.LoadSynchronous());
+}
+
+UTexture2D* ADAOCharacter::GetCharacterIcon() const
+{
+	return CharacterIcon;
 }

@@ -146,6 +146,30 @@ FGameplayTagContainer URTSAbilitySystemHelper::GetRelationshipTags(const AActor*
     return RelationshipTags;
 }
 
+int32 URTSAbilitySystemHelper::GetAbilityMaxLevel(UObject* WorldContextObject, TSubclassOf<UGameplayAbility> Ability)
+{
+    if (Ability == nullptr)
+    {
+        return 0;
+    }
+
+    URTSGameplayAbility* GameplayAbility = Cast<URTSGameplayAbility>(Ability->GetDefaultObject<UGameplayAbility>());
+
+    if (GameplayAbility == nullptr)
+    {
+        return 0;
+    }
+
+    int32 MaxLevel = GameplayAbility->GetMaxLevel();
+
+    if (MaxLevel > 0)
+    {
+        return MaxLevel;
+    }
+
+    return 0;   
+}
+
 void URTSAbilitySystemHelper::GetSourceAndTargetTags(const AActor* SourceActor, const AActor* TargetActor, FGameplayTagContainer& OutSourceTags, FGameplayTagContainer& OutTargetTags)
 {
     GetTags(SourceActor, OutSourceTags);
@@ -155,6 +179,19 @@ void URTSAbilitySystemHelper::GetSourceAndTargetTags(const AActor* SourceActor, 
 
     OutSourceTags.AppendTags(RelationshipTags);
     OutTargetTags.AppendTags(RelationshipTags);
+}
+
+FName URTSAbilitySystemHelper::GetLastTagName(FGameplayTag Tag)
+{
+    if (!Tag.IsValid())
+    {
+        return FName();
+    }
+
+    TArray<FName> TagNames;
+    UGameplayTagsManager::Get().SplitGameplayTagFName(Tag, TagNames);
+
+    return TagNames.Last();
 }
 
 void URTSAbilitySystemHelper::CreateGameplayEventData(AActor* Source, const FRTSOrderTargetData& TargetData, TSubclassOf<UGameplayAbility> Ability, FGameplayEventData& OutEventData)

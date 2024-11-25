@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "LyraInventoryItemDefinition.h"
 #include "Components/ActorComponent.h"
 #include "Net/Serialization/FastArraySerializer.h"
 
@@ -79,6 +80,8 @@ struct FLyraInventoryList : public FFastArraySerializer
 
 	TArray<ULyraInventoryItemInstance*> GetAllItems() const;
 
+	TArray<ULyraInventoryItemInstance*> GetItemsOfType(EItemType ItemType) const;
+
 public:
 	//~FFastArraySerializer contract
 	void PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize);
@@ -154,6 +157,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category=Inventory, BlueprintPure=false)
 	TArray<ULyraInventoryItemInstance*> GetAllItems() const;
 
+	UFUNCTION(BlueprintCallable, Category=Inventory, BlueprintPure=false)
+	TArray<ULyraInventoryItemInstance*> GetAllItemsOfType(EItemType ItemType) const;
+	
 	UFUNCTION(BlueprintCallable, Category=Inventory, BlueprintPure)
 	ULyraInventoryItemInstance* FindFirstItemStackByDefinition(TSubclassOf<ULyraInventoryItemDefinition> ItemDef) const;
 

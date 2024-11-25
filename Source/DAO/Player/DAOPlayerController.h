@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 
 // Local Includes
+#include "ItemType.h"
 #include "Inventory/DAOInventoryInterface.h"
 #include "UI/Viewmodels/CharacterInfoInterface.h"
 #include "RTSMoveOrder.h"
@@ -18,6 +19,7 @@
 #include "DAOPlayerController.generated.h"
 
 // Forward Declares
+class ADAOCharacter;
 class UNiagaraSystem;
 class UInputMappingContext;
 class UInputAction;
@@ -31,6 +33,18 @@ class UVMPlayerInfo;
 class UTargetingPreset;
 class ARTSOrderAIController;
 class UVMAbilities;
+
+USTRUCT(BlueprintType)
+struct FPartyCharacterInfo
+{
+	GENERATED_BODY()
+
+public:
+	/* Might be null if not spawned in the world */
+	UPROPERTY(BlueprintReadOnly)
+	TSoftObjectPtr<ADAOCharacter> Character;
+	
+};
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDAOCharacter, Log, All);
 
@@ -50,6 +64,7 @@ public:
 
 	// Implement IRPGInventoryInterface
 	virtual TArray<ULyraInventoryItemInstance*> GetInventoryData() override;
+	virtual TArray<ULyraInventoryItemInstance*> GetInventoryDataFiltered(EItemType ItemType) override;
 	// Implement IRPGInventoryInterface
 
 	// Implement ICharacterInfoInterface
@@ -65,13 +80,15 @@ public:
 	
 	FTraceHandle GetHitResultAtScreenPositionAsync(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, bool bTraceComplex, FTraceDelegate* InDelegate) const;
 
-protected:
-	virtual void SetupInputComponent() override;
+	UFUNCTION(BlueprintPure)
+	TArray<UTexture2D*> GetCurrentPartyIcons();
+
 	
+protected:
 	// To add mapping context
 	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
 
-	virtual void OnPossess(APawn* aPawn) override;
 
 	UFUNCTION()
 	void OnControlledCharacterPossessed();
@@ -212,6 +229,9 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<UTargetingPreset> InteractionTargetingPreset;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TArray<TSoftObjectPtr<ADAOCharacter>> PartyCharacters;
 
 	UPROPERTY(BlueprintReadOnly, Category = ViewModel, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UVMPlayerInfo> CharacterInfoViewModel;

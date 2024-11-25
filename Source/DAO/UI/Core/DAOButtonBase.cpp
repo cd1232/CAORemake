@@ -4,6 +4,7 @@
 #include "DAOButtonBase.h"
 
 #include "CommonActionWidget.h"
+#include "CommonTextBlock.h"
 
 void UDAOButtonBase::NativePreConstruct()
 {
@@ -46,9 +47,27 @@ void UDAOButtonBase::RefreshButtonText()
 	UpdateButtonText(ButtonText);	
 }
 
+void UDAOButtonBase::UpdateButtonText(const FText& InText)
+{
+	if (TextBlock_ButtonText)
+	{
+		TextBlock_ButtonText->SetText(InText);
+	}
+}
+
 void UDAOButtonBase::OnInputMethodChanged(ECommonInputType CurrentInputType)
 {
 	Super::OnInputMethodChanged(CurrentInputType);
 
 	UpdateButtonStyle();
+}
+
+void UDAOButtonBase::NativeOnCurrentTextStyleChanged()
+{
+	Super::NativeOnCurrentTextStyleChanged();
+
+	if (TextBlock_ButtonText)
+	{
+		TextBlock_ButtonText->SetStyle(GetCurrentTextStyleClass());
+	}
 }

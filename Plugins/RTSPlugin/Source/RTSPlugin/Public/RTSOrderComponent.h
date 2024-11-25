@@ -12,6 +12,7 @@
 
 class URTSOrder;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRTSOrderComponentOrderEnqueuedSignature, const FRTSOrderData&, Order);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRTSOrderComponentOrderChangedSignature, const FRTSOrderData&, NewOrder);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRTSOrderComponentOrderQueueClearedSignature);
 
@@ -21,98 +22,140 @@ class RTSPLUGIN_API URTSOrderComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	URTSOrderComponent();
+public:
+    URTSOrderComponent();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    //~ Begin UActorComponent Interface
+    virtual void BeginPlay() override;
+    //~ Begin UActorComponent Interface
 
-	/** Event when the actor has received a new order. */
-	virtual void NotifyOnOrderChanged(const FRTSOrderData& NewOrder);
+    void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	bool IssueOrder(const FRTSOrderData& Order);
+    /** Event when the actor has received a new order. */
+    virtual void NotifyOnOrderChanged(const FRTSOrderData& NewOrder);
 
-	void CancelOrder();
+    /** Event when the actor has received a new order. */
+    UPROPERTY(BlueprintAssignable, Category = "RTS")
+    FRTSOrderComponentOrderChangedSignature OnOrderChanged;
 
+    /** Issues this unit to obey the specified order. */
+    void IssueOrder(const FRTSOrderData& Order);
 
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    /** Enqueues an order that will be issued to the unit if all other orders has succeeded. */
+    void EnqueueOrder(const FRTSOrderData& Order);
 
-	void StopBehaviorTree();
+    /** Inserts an order that will be issued when this current order has succeeded. */
+    void InsertOrderAfterCurrentOrder(const FRTSOrderData& Order);
+
+    /** Clears the order queue. */
+    void ClearOrderQueue();
+
+    /**
+     * Inserts an order that will be issued immediately. The current order will be ordered again when this order
+     * finishes.
+     */
+    void InsertOrderBeforeCurrentOrder(const FRTSOrderData& Order);
+
+    /** Gets the type of the current order of this pawn. */
+    UFUNCTION(Category = RTS, BlueprintPure)
+    TSoftClassPtr<URTSOrder> GetCurrentOrderType() const;
+
+    /** Checks whether the pawn is idle, or has any orders. */
+    UFUNCTION(Category = RTS, BlueprintPure)
+    bool IsIdle() const;
+
+    FRTSOrderData GetCurrentOrderData() const;
+
+    TArray<FRTSOrderData> GetCurrentOrderDataQueue() const;
+
+    /** Gets the target actor of the current order of this pawn. */
+    UFUNCTION(Category = RTS, BlueprintPure)
+    AActor* GetCurrentOrderTargetActor() const;
+
+    /** Gets the target location of the current order of this pawn. */
+    UFUNCTION(Category = RTS, BlueprintPure)
+    FVector GetCurrentOrderTargetLocation() const;
+
+    /** Gets the target index of the current order of this pawn. */
+    UFUNCTION(Category = RTS, BlueprintPure)
+    int32 GetCurrentOrderTargetIndex() const;
+
+    /** Event when a new order has been enqueued. */
+    UPROPERTY(BlueprintAssignable, Category = "RTS")
+    FRTSOrderComponentOrderEnqueuedSignature OnOrderEnqueued;
+
+    /** Event when the order queue has been cleared. */
+    UPROPERTY(BlueprintAssignable, Category = "RTS")
+    FRTSOrderComponentOrderQueueClearedSignature OnOrderQueueCleared;
 
 private:
-	UFUNCTION()
-    void ReceivedCurrentOrder();
-
-    UFUNCTION()
-    void ReceivedOrderQueue();
-
-	void UpdateOrderPreviews();
-
-	void OrderCanceled();
-
-	void OrderEnded(ERTSOrderResult OrderResult);
-
-
-	bool CheckOrder(const FRTSOrderData& Order) const;
-	void ObeyOrder(const FRTSOrderData& Order);
-	void ObeyStopOrder();
-
-	void RegisterTagListeners(const FRTSOrderData& Order);
-	void UnregisterTagListeners(const FRTSOrderData& Order);
-
-	void LogOrderErrorMessage(const FString& Message, const FRTSOrderErrorTags& OrderErrorTags) const;
-
 	/** Store the current order of the actor. */
 	void SetCurrentOrder(FRTSOrderData NewOrder);
 
 	UFUNCTION()
-    void OnTargetTagsChanged(const FGameplayTag Tag, int32 NewCount);
+	void ReceivedCurrentOrder();
 
-    UFUNCTION()
-    void OnOwnerTagsChanged(const FGameplayTag Tag, int32 NewCount);
+	UFUNCTION()
+	void ReceivedOrderQueue();
 
-    UFUNCTION()
-    void OnOrderEndedCallback(ERTSOrderResult OrderResult);
+	void ObeyOrder(const FRTSOrderData& Order);
+	bool CheckOrder(const FRTSOrderData& Order) const;
+	void LogOrderErrorMessage(const FString& Message, const FRTSOrderErrorTags& OrderErrorTags) const;
+
+	UFUNCTION()
+	void OnOrderEndedCallback(ERTSOrderResult OrderResult);
+
+	void OrderEnded(ERTSOrderResult OrderResult);
+	void OrderCanceled();
+	void RegisterTagListeners(const FRTSOrderData& Order);
+	void UnregisterTagListeners(const FRTSOrderData& Order);
+
+	UFUNCTION()
+	void OnTargetTagsChanged(const FGameplayTag Tag, int32 NewCount);
+
+	UFUNCTION()
+	void OnOwnerTagsChanged(const FGameplayTag Tag, int32 NewCount);
+
+	void ObeyStopOrder();
 
 	AActor* CreateOrderPreviewActor(const FRTSOrderData& Order);
 
-public:	
-	/** Event when the actor has received a new order. */
-	UPROPERTY(BlueprintAssignable)
-	FRTSOrderComponentOrderChangedSignature OnOrderChanged;
+	UFUNCTION()
+	void OnSelected();
 
-	
-	/** Event when the order queue has been cleared. */
-    UPROPERTY(BlueprintAssignable)
-	FRTSOrderComponentOrderQueueClearedSignature OnOrderQueueCleared;
+	UFUNCTION()
+	void OnDeselected();
+
+	void UpdateOrderPreviews();
 
 private:
-    UPROPERTY()
-    TArray<AActor*> OrderPreviewActors;
-
-    /** Class of the preview actor that is used to show the target location of an order. */
-    UPROPERTY(Category = "RTS", BlueprintReadOnly, EditDefaultsOnly, meta = (AllowPrivateAccess = true))
-    TSubclassOf<AActor> OrderPreviewActorClass;
+	UPROPERTY(BlueprintReadOnly, Category = "RTS", ReplicatedUsing = ReceivedCurrentOrder,
+			  meta = (AllowPrivateAccess = true))
+	FRTSOrderData CurrentOrder;
 
 	UPROPERTY(BlueprintReadOnly, Category = "RTS", ReplicatedUsing = ReceivedCurrentOrder,
-              meta = (AllowPrivateAccess = true))
-    FRTSOrderData CurrentOrder;
-
-    UPROPERTY(BlueprintReadOnly, Category = "RTS", ReplicatedUsing = ReceivedCurrentOrder,
-              meta = (AllowPrivateAccess = true))
+			  meta = (AllowPrivateAccess = true))
 	FRTSOrderData LastOrder;
 
-    UPROPERTY(BlueprintReadOnly, Category = "RTS", ReplicatedUsing = ReceivedOrderQueue,
-              meta = (AllowPrivateAccess = true))
-    TArray<FRTSOrderData> OrderQueue;
+	UPROPERTY(BlueprintReadOnly, Category = "RTS", ReplicatedUsing = ReceivedOrderQueue,
+			  meta = (AllowPrivateAccess = true))
+	TArray<FRTSOrderData> OrderQueue;
 
 	UPROPERTY()
-    TSoftClassPtr<URTSOrder> StopOrder;
+	TSoftClassPtr<URTSOrder> StopOrder;
 
 	UPROPERTY()
-	FRTSOrderData EmptyOrder;
+	TArray<AActor*> OrderPreviewActors;
+
+	/** Class of the preview actor that is used to show the target location of an order. */
+	UPROPERTY(Category = RTS, BlueprintReadOnly, EditDefaultsOnly, meta = (AllowPrivateAccess = true))
+	TSubclassOf<AActor> OrderPreviewActorClass;
+
+	/** Order type that is used to begin the construction of a building. */
+	UPROPERTY(Category = RTS, BlueprintReadOnly, EditDefaultsOnly, meta = (AllowPrivateAccess = true))
+	TSoftClassPtr<URTSOrder> BeginConstructionOrder;
+
+	//URTSSelectableComponent* SelectableComponent;
 
 	/**
 	 * The handles of the delegates that are registered on the ability system of the actor owner to be able to abort
