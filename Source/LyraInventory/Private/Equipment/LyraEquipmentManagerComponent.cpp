@@ -400,6 +400,35 @@ TArray<TSubclassOf<ULyraEquipmentDefinition>> ULyraEquipmentManagerComponent::Ge
 	return EquippedWeapons;
 }
 
+TSubclassOf<ULyraEquipmentDefinition> ULyraEquipmentManagerComponent::GetEquippedItemDefInSlot(EEquipmentSlot Slot)
+{
+	for (const FSlotToEntryPair& SlotEntry : EquipmentList.Entries)
+	{
+		if (SlotEntry.EquipmentSlot == Slot)
+		{
+			if (SlotEntry.Entry.Instance)
+			{
+				return SlotEntry.Entry.EquipmentDefinition;											
+			}
+		}
+	}
+
+	return nullptr;
+}
+
+ULyraEquipmentInstance* ULyraEquipmentManagerComponent::GetEquippedItemInSlot(EEquipmentSlot Slot)
+{
+	for (const FSlotToEntryPair& SlotEntry : EquipmentList.Entries)
+	{
+		if (SlotEntry.EquipmentSlot == Slot)
+		{
+			return SlotEntry.Entry.Instance;
+		}
+	}
+
+	return nullptr;
+}
+
 FString FSlotToEntryPair::GetDebugString() const
 {
 	return FString(TEXT("SlotToEntryPair"));

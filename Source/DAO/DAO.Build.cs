@@ -13,7 +13,7 @@ public class DAO : ModuleRules
 			"DAO",
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "LyraInventory" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "LyraInventory", "KatsuraQuest" });
 
 		PublicDependencyModuleNames.AddRange(
 			new string[] { 

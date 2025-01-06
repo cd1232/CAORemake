@@ -22,16 +22,6 @@
 			"Name": "LyraInventory",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "KatsuraQuest",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "KatsuraQuestEditor",
-			"Type": "Editor",
-			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
@@ -297,6 +287,10 @@
 		},
 		{
 			"Name": "Minimap",
+			"Enabled": true
+		},
+		{
+			"Name": "KatsuraQuest",
 			"Enabled": true
 		}
 	],

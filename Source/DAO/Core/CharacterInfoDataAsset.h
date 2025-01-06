@@ -3,8 +3,25 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "CharacterInfoDataAsset.generated.h"
+
+class ULyraInventoryItemDefinition;
+
+USTRUCT(BlueprintType)
+struct FDefaultInventoryItem
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftClassPtr<ULyraInventoryItemDefinition> ItemDefinition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bIsEquipped = false;
+};
+
 
 /**
  * 
@@ -15,12 +32,18 @@ class DAO_API UCharacterInfoDataAsset : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, blueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGameplayTag CharacterTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftClassPtr<UAnimInstance> AnimInstance;
 
-	UPROPERTY(EditAnywhere, blueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<USkeletalMesh> SkeletalMesh;
 	
-	UPROPERTY(EditAnywhere, blueprintReadOnly)
-	TObjectPtr<UTexture2D> CharacterIcon;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UTexture2D> CharacterIcon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FDefaultInventoryItem> DefaultInventory;	
 };

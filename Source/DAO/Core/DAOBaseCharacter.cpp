@@ -6,12 +6,14 @@
 // Engine Includes
 
 // Local Includes
+#include "CharacterInfoDataAsset.h"
 #include "Abilities/DAOAbilitySystemComponent.h"
 #include "Attributes/DAOAttributeSetBase.h"
 #include "Attributes/DAOPrimaryAttributeSet.h"
 #include "Player/DAOPlayerState.h"
 #include "DAOGlobalTags.h"
 #include "DAOCollisionTypes.h"
+#include "InventoryFragment_EquippableItem.h"
 #include "LyraInventoryManagerComponent.h"
 #include "Equipment/LyraEquipmentManagerComponent.h"
 #include "RTSOrderComponent.h"
@@ -169,6 +171,11 @@ FText ADAOBaseCharacter::GetCharacterName() const
 	return CharacterName;
 }
 
+UTexture2D* ADAOBaseCharacter::GetCharacterIcon() const
+{
+	return CharacterIcon;
+}
+
 void ADAOBaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -206,6 +213,26 @@ void ADAOBaseCharacter::BeginPlay()
 		CharacterLevelChangedDelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetCharacterLevelAttribute()).AddUObject(this, &ADAOBaseCharacter::LevelChanged);
 
 		AbilitySystemComponent->RegisterGameplayTagEvent(FGameplayTag::RequestGameplayTag(FName("Status.Changing.Immobilized")), EGameplayTagEventType::NewOrRemoved).AddUObject(this, &ADAOBaseCharacter::StunTagChanged);
+	}
+
+	UCharacterInfoDataAsset* LoadedCharacterInfo = CharacterInfoAsset.LoadSynchronous();
+	if (LoadedCharacterInfo)
+	{
+		GetMesh()->SetSkeletalMesh(LoadedCharacterInfo->SkeletalMesh.LoadSynchronous());
+		GetMesh()->SetAnimInstanceClass(LoadedCharacterInfo->AnimInstance.LoadSynchronous());
+		CharacterIcon = LoadedCharacterInfo->CharacterIcon.LoadSynchronous();
+		CharacterTag = LoadedCharacterInfo->CharacterTag;
+
+		for (FDefaultInventoryItem& Item : LoadedCharacterInfo->DefaultInventory)
+		{
+			TSubclassOf<ULyraInventoryItemDefinition> ItemDefClass = Item.ItemDefinition.LoadSynchronous();
+			ULyraInventoryItemInstance* ItemInstance = LyraInventoryComponentNew->AddItemDefinition(ItemDefClass);
+
+			if (Item.bIsEquipped)
+			{					
+				LyraEquipmentComponent->EquipItemFromItemInstance(ItemInstance);	
+			}
+		}
 	}
 }
 

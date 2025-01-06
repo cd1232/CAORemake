@@ -50,15 +50,3 @@ ADAOCharacter::ADAOCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 }
-
-void ADAOCharacter::SetupCharacter(UCharacterInfoDataAsset* CharacterInfo)
-{
-	GetMesh()->SetSkeletalMesh(CharacterInfo->SkeletalMesh.LoadSynchronous());
-	CharacterIcon = CharacterInfo->CharacterIcon;
-	GetMesh()->SetAnimInstanceClass(CharacterInfo->AnimInstance.LoadSynchronous());
-}
-
-UTexture2D* ADAOCharacter::GetCharacterIcon() const
-{
-	return CharacterIcon;
-}

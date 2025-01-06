@@ -12,7 +12,7 @@ class ULyraEquipmentDefinition;
 class UObject;
 
 UCLASS()
-class UInventoryFragment_EquippableItem : public ULyraInventoryItemFragment
+class LYRAINVENTORY_API UInventoryFragment_EquippableItem : public ULyraInventoryItemFragment
 {
 	GENERATED_BODY()
 

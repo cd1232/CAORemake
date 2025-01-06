@@ -170,15 +170,21 @@ public:
 	ULyraEquipmentInstance* GetFirstInstanceOfType(TSubclassOf<ULyraEquipmentInstance> InstanceType);
 
  	/** Returns all equipped instances of a given type, or an empty array if none are found */
- 	UFUNCTION(BlueprintCallable, BlueprintPure)
+ 	UFUNCTION(BlueprintPure)
 	TArray<ULyraEquipmentInstance*> GetEquipmentInstancesOfType(TSubclassOf<ULyraEquipmentInstance> InstanceType) const;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintPure)
 	ULyraEquipmentInstance* GetEquipmentInstance(ULyraInventoryItemInstance* ItemInstance);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintPure)
 	TArray<TSubclassOf<ULyraEquipmentDefinition>> GetEquippedWeapons();
 
+	UFUNCTION(BlueprintPure)
+	TSubclassOf<ULyraEquipmentDefinition> GetEquippedItemDefInSlot(EEquipmentSlot Slot);
+
+	UFUNCTION(BlueprintPure)
+	ULyraEquipmentInstance* GetEquippedItemInSlot(EEquipmentSlot Slot);
+	
 	template <typename T>
 	T* GetFirstInstanceOfType()
 	{

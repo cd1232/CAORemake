@@ -8,12 +8,7 @@
 
 #include "LyraInventoryItemDefinition.generated.h"
 
-template <typename T> class TSubclassOf;
-
 class ULyraInventoryItemInstance;
-struct FFrame;
-
-
 
 //////////////////////////////////////////////////////////////////////
 
@@ -33,7 +28,7 @@ public:
  * ULyraInventoryItemDefinition
  */
 UCLASS(Blueprintable, Const, Abstract)
-class ULyraInventoryItemDefinition : public UObject
+class LYRAINVENTORY_API ULyraInventoryItemDefinition : public UObject
 {
 	GENERATED_BODY()
 
@@ -54,11 +49,17 @@ public:
 
 public:
 	const ULyraInventoryItemFragment* FindFragmentByClass(TSubclassOf<ULyraInventoryItemFragment> FragmentClass) const;
+
+	template<typename T = ULyraInventoryItemFragment>
+	const T* FindFragmentByClass() const
+	{
+		return Cast<T>(FindFragmentByClass(T::StaticClass()));
+	}
 };
 
 //@TODO: Make into a subsystem instead?
 UCLASS()
-class ULyraInventoryFunctionLibrary : public UBlueprintFunctionLibrary
+class LYRAINVENTORY_API ULyraInventoryFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

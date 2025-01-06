@@ -16,6 +16,7 @@
 // Generated Include
 #include "DAOBaseCharacter.generated.h"
 
+class UCharacterInfoDataAsset;
 // Forward Declares
 class UDAOAbilitySystemComponent;
 class UDAOAttributeSetBase;
@@ -76,6 +77,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Character")
 	FText GetCharacterName() const;
+
+	UFUNCTION(BlueprintPure, Category = "Character")
+	UTexture2D* GetCharacterIcon() const;
 
 	// ACharacter
 	virtual void PossessedBy(AController* NewController) override;
@@ -171,6 +175,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<ULyraInventoryManagerComponent> LyraInventoryComponentNew;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TSoftObjectPtr<UCharacterInfoDataAsset> CharacterInfoAsset;
+	
 	UPROPERTY()
 	TObjectPtr<UDAOAttributeSetBase> AttributeSet;
 
@@ -179,6 +186,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<URTSOrderComponent> OrderComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTexture2D> CharacterIcon;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FGameplayTag CharacterTag;
 
 	FGameplayTag DeadTag;
 	FGameplayTag EffectRemoveOnDeathTag;
